@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Avatar Analyzer with face-api.js</title>
+<script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+<style>
+  body {font-family: 'Poppins', sans-serif; background:#f8f9fa; margin:0; padding:2rem;}
+  h1 {text-align:center; color:#333;}
+  .container {max-width:800px; margin:auto; background:#fff; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1); padding:2rem;}
+  #analysisOutput {margin-top:2rem;}
+  .feature-tag {background:#e8f0fe; padding:1rem; border-radius:10px; margin-bottom:1rem;}
+  .vocab-card {border:1px solid #eee; border-radius:1rem; padding:1rem; margin:1rem 0; box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+  .vocab-word {font-weight:bold; color:#333; font-size:1.2rem;}
+  .vocab-def {color:#555; margin-top:0.5rem;}
+  .vocab-ex {color:#666; font-style:italic; margin-top:0.5rem;}
+  img.vocab-img {width:100%; border-radius:8px; margin-top:0.5rem;}
+</style>
+</head>
+<body>
+  <h1>Avatar Analyzer</h1>
+  <div class="container">
+    <input type="file" id="imageUpload" accept="image/*" />
+    <div id="analysisOutput"></div>
+    <div id="vocabularySection"></div>
+  </div>
+  <script>
+  const vocabularyDB = {
+    accessories: [
+      {word:"Hijab", def:"A head covering worn by Muslim women.", ex:"She often wears a beautiful patterned hijab to school.", img:"img/hijab.jpg"},
+      {word:"Brooch", def:"A decorative pin worn on clothing.", ex:"She pinned a silver brooch to her scarf.", img:"img/brooch.jpg"},
+      {word:"Pin", def:"A small metal spike used to fasten fabric.", ex:"She used a small pin to secure her veil.", img:"img/pin.jpg"},
+      {word:"Glasses", def:"Lenses worn on the face to help with vision.", ex:"He usually wears glasses when he reads.", img:"img/glasses.jpg"},
+      {word:"Sunglasses", def:"Dark glasses to protect the eyes from sunlight.", ex:"I bring my sunglasses whenever I go to the beach.", img:"img/sunglasses.jpg"},
+      {word:"Necklace", def:"Jewelry worn around the neck.", ex:"My mother bought a new gold necklace.", img:"img/necklace.jpg"},
+      {word:"Earrings", def:"Jewelry worn on the ear.", ex:"She always wears small silver earrings.", img:"img/earrings.jpg"},
+      {word:"Bracelet", def:"A band worn around the wrist.", ex:"My friend gave me a pretty beaded bracelet.", img:"img/bracelet.jpg"},
+      {word:"Ring", def:"A circular band of metal worn on the finger.", ex:"She wears a simple silver ring every day.", img:"img/ring.jpg"},
+      {word:"Watch", def:"A device worn on the wrist to tell time.", ex:"I always wear my watch so I don’t miss appointments.", img:"img/watch.jpg"},
+      {word:"Backpack", def:"A bag carried on the back.", ex:"He uses a sturdy backpack to carry his books.", img:"img/backpack.jpg"},
+      {word:"Handbag", def:"A small bag used for carrying personal items.", ex:"She placed her phone inside her black handbag.", img:"img/handbag.jpg"},
+      {word:"Hat", def:"A covering worn on the head.", ex:"He wore a baseball hat to protect his face from the sun.", img:"img/hat.jpg"},
+      {word:"Gloves", def:"A covering for the hands.", ex:"I wear gloves when riding my motorbike.", img:"img/gloves.jpg"},
+      {word:"Belt", def:"A strip of leather or fabric worn around the waist.", ex:"He wore a brown leather belt with his trousers.", img:"img/belt.jpg"},
+      {word:"Scarf", def:"A length of cloth worn around the neck or head.", ex:"She wrapped a warm scarf around her neck.", img:"img/scarf.jpg"},
+      {word:"Tie", def:"A strip of material worn around the collar.", ex:"He had to wear a formal tie for the event.", img:"img/tie.jpg"},
+      {word:"Hoodie", def:"A sweatshirt with a hood.", ex:"I often wear a comfortable hoodie at home.", img:"img/hoodie.jpg"},
+      {word:"Cap", def:"A soft hat with a visor.", ex:"He wore a blue cap with his favorite logo.", img:"img/cap.jpg"},
+      {word:"Headband", def:"A band worn around the head to keep hair in place.", ex:"She wore a floral headband during the photoshoot.", img:"img/headband.jpg"}
+    ]
+  };
+
+  async function loadModels(){
+    await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
+    await faceapi.nets.faceExpressionNet.loadFromUri('/models');
+    console.log('Models loaded');
+  }
+
+  async function analyzeImage(){
+    const imgInput = document.getElementById('imageUpload');
+    if(!imgInput.files[0]) return;
+    const img = await faceapi.bufferToImage(imgInput.files[0]);
+    const output = document.getElementById('analysisOutput');
+    output.innerHTML = '<p>Analyzing face...</p>';
+
+    const detections = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceExpressions();
+
+    if(!detections){
+      output.innerHTML = '<p>No face detected. Try another photo.</p>';
+      return;
+    }
+
+    const expressions = detections.expressions;
+    const topExpression = Object.keys(expressions).reduce((a,b)=> expressions[a]>expressions[b]?a:b);
+    output.innerHTML = `<div class='feature-tag'><strong>Expression:</strong> ${topExpression}</div>`;
+
+    displayVocabulary('accessories');
+  }
+
+  function displayVocabulary(category){
+    const section = document.getElementById('vocabularySection');
+    section.innerHTML = `<h2>${category.charAt(0).toUpperCase()+category.slice(1)} Vocabulary</h2>`;
+    vocabularyDB[category].forEach(item=>{
+      section.innerHTML += `
+        <div class='vocab-card'>
+          <div class='vocab-word'>${item.word}</div>
+          <div class='vocab-def'>${item.def}</div>
+          <div class='vocab-ex'><em>${item.ex}</em></div>
+          <img class='vocab-img' src='${item.img}' alt='${item.word}' onerror="this.style.display='none'">
+        </div>`;
+    });
+  }
+
+  document.getElementById('imageUpload').addEventListener('change', analyzeImage);
+  loadModels();
+  </script>
+</body>
+</html>
